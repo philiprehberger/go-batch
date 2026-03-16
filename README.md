@@ -61,6 +61,13 @@ acc.Stop()
 | `FlushSize[T](n)` | Flush when N items accumulated |
 | `FlushInterval[T](d)` | Flush on time interval |
 
+## Development
+
+```bash
+go test ./...
+go vet ./...
+```
+
 ## License
 
 MIT
