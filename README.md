@@ -1,5 +1,9 @@
 # go-batch
 
+[![CI](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/philiprehberger/go-batch.svg)](https://pkg.go.dev/github.com/philiprehberger/go-batch)
+[![License](https://img.shields.io/github/license/philiprehberger/go-batch)](LICENSE)
+
 Batch processing and chunking utilities for Go. Generic, concurrent, zero dependencies.
 
 ## Installation
