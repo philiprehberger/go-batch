@@ -80,3 +80,46 @@ func Process[T any](ctx context.Context, items []T, batchSize int, fn func(ctx c
 
 	return errors.Join(errs...)
 }
+
+// ProcessWithErrors splits items into batches of batchSize and calls fn for
+// each batch using the given number of concurrent workers. Unlike Process,
+// it does not use a context and returns all non-nil errors as a slice rather
+// than combining them.
+func ProcessWithErrors[T any](items []T, size int, workers int, fn func([]T) error) []error {
+	batches := Chunk(items, size)
+	if len(batches) == 0 {
+		return nil
+	}
+
+	if workers < 1 {
+		workers = 1
+	}
+
+	var (
+		mu   sync.Mutex
+		errs []error
+		wg   sync.WaitGroup
+	)
+
+	sem := make(chan struct{}, workers)
+
+	for _, b := range batches {
+		sem <- struct{}{}
+		wg.Add(1)
+
+		go func(batch []T) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			if err := fn(batch); err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
+		}(b)
+	}
+
+	wg.Wait()
+
+	return errs
+}

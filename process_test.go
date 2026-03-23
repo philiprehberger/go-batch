@@ -102,3 +102,52 @@ func TestProcess_EmptyItems(t *testing.T) {
 		t.Fatal("fn should not be called for empty items")
 	}
 }
+
+func TestProcessWithErrors_NoErrors(t *testing.T) {
+	items := []int{1, 2, 3, 4, 5}
+	errs := ProcessWithErrors(items, 2, 2, func(batch []int) error {
+		return nil
+	})
+
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got %d", len(errs))
+	}
+}
+
+func TestProcessWithErrors_CollectsErrors(t *testing.T) {
+	items := []int{1, 2, 3, 4, 5, 6}
+	errs := ProcessWithErrors(items, 2, 1, func(batch []int) error {
+		if batch[0] == 3 {
+			return errors.New("batch starting with 3 failed")
+		}
+		if batch[0] == 5 {
+			return errors.New("batch starting with 5 failed")
+		}
+		return nil
+	})
+
+	if len(errs) != 2 {
+		t.Fatalf("expected 2 errors, got %d", len(errs))
+	}
+}
+
+func TestProcessWithErrors_Empty(t *testing.T) {
+	errs := ProcessWithErrors([]int{}, 5, 1, func(batch []int) error {
+		return errors.New("should not be called")
+	})
+
+	if errs != nil {
+		t.Fatalf("expected nil for empty items, got %v", errs)
+	}
+}
+
+func TestProcessWithErrors_AllFail(t *testing.T) {
+	items := []int{1, 2, 3}
+	errs := ProcessWithErrors(items, 1, 2, func(batch []int) error {
+		return errors.New("fail")
+	})
+
+	if len(errs) != 3 {
+		t.Fatalf("expected 3 errors, got %d", len(errs))
+	}
+}

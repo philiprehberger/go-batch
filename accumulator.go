@@ -2,6 +2,7 @@ package batch
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -11,6 +12,7 @@ type AccumulatorOption[T any] func(*accumulatorConfig)
 type accumulatorConfig struct {
 	flushSize     int
 	flushInterval time.Duration
+	onFlush       any // stores func([]T) — type-asserted in flushLocked
 }
 
 // FlushSize configures the Accumulator to automatically flush when n items
@@ -30,16 +32,36 @@ func FlushInterval[T any](d time.Duration) AccumulatorOption[T] {
 	}
 }
 
+// OnFlush registers a callback that is invoked after each flush with the
+// flushed items. The callback runs after the main flush function.
+func OnFlush[T any](fn func([]T)) AccumulatorOption[T] {
+	return func(c *accumulatorConfig) {
+		c.onFlush = fn
+	}
+}
+
+// AccumulatorStats contains statistics about an Accumulator's lifetime.
+type AccumulatorStats struct {
+	// FlushCount is the total number of flushes performed.
+	FlushCount int64
+	// TotalItems is the total number of items flushed.
+	TotalItems int64
+	// Pending is the number of items currently buffered.
+	Pending int
+}
+
 // Accumulator collects items and flushes them in batches. Flushing can be
 // triggered manually, by reaching a size threshold, or on a time interval.
 // All methods are safe for concurrent use.
 type Accumulator[T any] struct {
-	mu     sync.Mutex
-	items  []T
-	fn     func(items []T)
-	cfg    accumulatorConfig
-	stop   chan struct{}
-	closed bool
+	mu         sync.Mutex
+	items      []T
+	fn         func(items []T)
+	cfg        accumulatorConfig
+	stop       chan struct{}
+	closed     bool
+	flushCount atomic.Int64
+	totalItems atomic.Int64
 }
 
 // NewAccumulator creates a new Accumulator that calls fn with the buffered
@@ -101,6 +123,35 @@ func (a *Accumulator[T]) Stop() {
 	a.Flush()
 }
 
+// Stats returns statistics about the accumulator's lifetime. It is safe to
+// call concurrently.
+func (a *Accumulator[T]) Stats() AccumulatorStats {
+	a.mu.Lock()
+	pending := len(a.items)
+	a.mu.Unlock()
+
+	return AccumulatorStats{
+		FlushCount: a.flushCount.Load(),
+		TotalItems: a.totalItems.Load(),
+		Pending:    pending,
+	}
+}
+
+// Peek returns a copy of the currently buffered items without flushing.
+// It is safe to call concurrently.
+func (a *Accumulator[T]) Peek() []T {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if len(a.items) == 0 {
+		return nil
+	}
+
+	cp := make([]T, len(a.items))
+	copy(cp, a.items)
+	return cp
+}
+
 // flushLocked sends buffered items to the callback. Must be called with
 // a.mu held.
 func (a *Accumulator[T]) flushLocked() {
@@ -110,6 +161,15 @@ func (a *Accumulator[T]) flushLocked() {
 	items := a.items
 	a.items = nil
 	a.fn(items)
+
+	a.flushCount.Add(1)
+	a.totalItems.Add(int64(len(items)))
+
+	if a.cfg.onFlush != nil {
+		if cb, ok := a.cfg.onFlush.(func([]T)); ok {
+			cb(items)
+		}
+	}
 }
 
 func (a *Accumulator[T]) runTicker() {

@@ -28,3 +28,20 @@ func Chunk[T any](items []T, size int) [][]T {
 
 	return chunks
 }
+
+// ChunkBy groups items by the value returned from the key function. Items
+// sharing the same key are collected into the same slice. The iteration order
+// of the returned map is not guaranteed.
+func ChunkBy[T any, K comparable](items []T, key func(T) K) map[K][]T {
+	if len(items) == 0 {
+		return nil
+	}
+
+	groups := make(map[K][]T)
+	for _, item := range items {
+		k := key(item)
+		groups[k] = append(groups[k], item)
+	}
+
+	return groups
+}
