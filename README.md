@@ -1,6 +1,6 @@
 # go-batch
 
-[![CI](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/philiprehberger/go-batch.svg)](https://pkg.go.dev/github.com/philiprehberger/go-batch) [![License](https://img.shields.io/github/license/philiprehberger/go-batch)](LICENSE)
+[![CI](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/go-batch/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/philiprehberger/go-batch.svg)](https://pkg.go.dev/github.com/philiprehberger/go-batch) [![License](https://img.shields.io/github/license/philiprehberger/go-batch)](LICENSE) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub%20Sponsors-ec6cb9)](https://github.com/sponsors/philiprehberger)
 
 Batch processing and chunking utilities for Go. Generic, concurrent, zero dependencies
 
